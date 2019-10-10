@@ -25,28 +25,38 @@ app.use(bodyParser.json());
 
 // API
 app.get('/campaigns', async (req, res) => {
-    let campaignStartDocRef = db.collection('campaigns').doc('bj0ZVr3eIdYiLhocfcQv');
-    const campaigns = campaignStartDocRef.get().then(snapshot => {
-        let startAtSnapshot = db.collection('campaigns')
-            .orderBy('createdAt')
-            .startAt(snapshot);
-
-        return startAtSnapshot.limit(5).get();
+    const userDoc = userRef.doc("hRF3e4PUclm85clOuur0");
+    let campaignStartDocRef = campaignRef.doc('2RNnoWHJdw9I8vSE2M8v');
+    let campaignStartDoc = await campaignStartDocRef.get();
+    let campaigns = await campaignRef
+        .where("user", "==", userDoc)
+        .orderBy('createdAt')
+        .startAfter(campaignStartDoc)
+        .limit(10).get();
+    let hasNextPage = false;
+    if (campaigns.size > 0) {
+        const lastCampaign = campaigns.docs[campaigns.size - 1];
+        const hasNextPageSnapshot = await campaignRef
+            .where("user", "==", userDoc)
+            .orderBy('createdAt', "desc")
+            .startAfter(campaignStartDoc)
+            .limit(1)
+            .get();
+        hasNextPage = hasNextPageSnapshot.size > 0;
+    }
+    campaigns = campaigns.docs.map(doc => {
+        return {
+            id: doc.id,
+            name: doc.data().name
+        }
     });
-    let data = [];
-    campaigns.then(snapshot => {
-        snapshot.forEach(doc => {
-            data.push({
-                id: doc.id,
-                name: doc.data().name
-            })
-        });
-        return res.send({
-            data,
-            size: data.length
-        });
-    })
-
+    return res.send({
+        edges: campaigns,
+        pageInfo: {
+            hasNextPage,
+            startAt: hasNextPage ? campaigns[campaigns.length - 1].id : null
+        }
+    });
 });
 
 
