@@ -4,6 +4,10 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const serviceAccount = require("./serviceAccountKey.json");
+const updateCouponHandler = require("./handlers/updateCouponHandler");
+const { Firestore } = require("@google-cloud/firestore");
+const firestore = new Firestore();
+
 
 const firebaseApp = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -13,36 +17,37 @@ const firebaseApp = admin.initializeApp({
 // Setup
 const db = firebaseApp.firestore();
 // const app = express.Router();
+const campaignRef = db.collection("campaigns");
+const userRef = db.collection("users");
 
 // Middleware
 app.use(bodyParser.json());
 
 // API
-app.get('/posts', async (req, res) => {
-    const postRef = await db.collection("posts").get();
-    let posts = postRef.docs.map(post => {
+app.get('/campaigns', async (req, res) => {
+    const userDoc = userRef.doc("hRF3e4PUclm85clOuur0");
+    console.log(userDoc.id)
+    let campaignQuery = campaignRef.where("user", "==", userDoc);
+    const campaignDocs = await campaignQuery.get();
+    let campaigns = campaignDocs.docs.map(campaign => {
+        console.log(campaign.id)
+        const { name, createdAt } = campaign.data();
         return {
-            id: post.id,
-            ...post.data()
+            id: campaign.id,
+            name,
+            createdAt
         }
     });
 
     return res.send({
-        posts
+        campaigns
     });
 });
-app.post('/posts', async (req, res) => {
-    const postRef = db.collection("posts");
-    const {title, body} = req.body;
-    const post = await postRef.add({
-        title,
-        body
-    });
 
-    return res.send({
-        message: "Post created sucessfully",
-        id: post.id
-    });
-});
 
 exports.app = functions.https.onRequest(app);
+
+exports.updateCoupon = functions
+    .firestore
+    .document("coupons/{couponId}")
+    .onUpdate(updateCouponHandler);
