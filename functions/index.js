@@ -25,23 +25,28 @@ app.use(bodyParser.json());
 
 // API
 app.get('/campaigns', async (req, res) => {
-    const userDoc = userRef.doc("hRF3e4PUclm85clOuur0");
-    console.log(userDoc.id)
-    let campaignQuery = campaignRef.where("user", "==", userDoc);
-    const campaignDocs = await campaignQuery.get();
-    let campaigns = campaignDocs.docs.map(campaign => {
-        console.log(campaign.id)
-        const { name, createdAt } = campaign.data();
-        return {
-            id: campaign.id,
-            name,
-            createdAt
-        }
-    });
+    let campaignStartDocRef = db.collection('campaigns').doc('bj0ZVr3eIdYiLhocfcQv');
+    const campaigns = campaignStartDocRef.get().then(snapshot => {
+        let startAtSnapshot = db.collection('campaigns')
+            .orderBy('createdAt')
+            .startAt(snapshot);
 
-    return res.send({
-        campaigns
+        return startAtSnapshot.limit(5).get();
     });
+    let data = [];
+    campaigns.then(snapshot => {
+        snapshot.forEach(doc => {
+            data.push({
+                id: doc.id,
+                name: doc.data().name
+            })
+        });
+        return res.send({
+            data,
+            size: data.length
+        });
+    })
+
 });
 
 
