@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "test-node-firebase-b9cd0"
+    "default": "test-node-firebase-b9cd0",
+    "dev": "test-node-firebase-b9cd0"
   }
 }

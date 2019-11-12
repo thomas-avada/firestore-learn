@@ -65,3 +65,7 @@ node_modules/
 .env
 
 .idea/
+
+#React
+build/
+
